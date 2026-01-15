@@ -4,7 +4,8 @@ import axios from "axios";
 import MessageList from "./MessageList";
 import "./chat.css";
 
-const socket = io("https://chat-application-backend-001.vercel.app");
+const BASE_URL = "https://chat-application-backend-001.vercel.app";
+const socket = io(BASE_URL);
 
 export const Chat = ({ user }) => {
   const [users, setUsers] = useState([]);
@@ -12,16 +13,20 @@ export const Chat = ({ user }) => {
   const [messages, setMessages] = useState([]);
   const [currentMessage, setCurrentMessage] = useState("");
 
+  // Join user room
   useEffect(() => {
-    // Fetch all users excluding the current user
+    if (user?.username) {
+      socket.emit("join", user.username);
+    }
+  }, [user.username]);
+
+  // Fetch users
+  useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const { data } = await axios.get(
-          "https://chat-application-backend-001.vercel.app/users",
-          {
-            params: { currentUser: user.username },
-          }
-        );
+        const { data } = await axios.get(`${BASE_URL}/users`, {
+          params: { currentUser: user.username },
+        });
         setUsers(data);
       } catch (error) {
         console.error("Error fetching users", error);
@@ -29,27 +34,24 @@ export const Chat = ({ user }) => {
     };
 
     fetchUsers();
+  }, [user.username]);
 
-    // Listen for incoming messages
-    socket.on("receive_message", (data) => {
-      if (data.sender === currentChat || data.receiver === currentChat) {
-        setMessages((prev) => [...prev, data]);
-      }
+  // Listen to messages
+  useEffect(() => {
+    socket.on("receive_message", (msg) => {
+      setMessages((prev) => [...prev, msg]);
     });
 
     return () => {
       socket.off("receive_message");
     };
-  }, [currentChat]);
+  }, []);
 
   const fetchMessages = async (receiver) => {
     try {
-      const { data } = await axios.get(
-        "https://chat-application-backend-001.vercel.app/messages",
-        {
-          params: { sender: user.username, receiver },
-        }
-      );
+      const { data } = await axios.get(`${BASE_URL}/messages`, {
+        params: { sender: user.username, receiver },
+      });
       setMessages(data);
       setCurrentChat(receiver);
     } catch (error) {
@@ -58,19 +60,21 @@ export const Chat = ({ user }) => {
   };
 
   const sendMessage = () => {
-    const messageData = {
+    if (!currentMessage.trim() || !currentChat) return;
+
+    socket.emit("send_message", {
       sender: user.username,
       receiver: currentChat,
       message: currentMessage,
-    };
-    socket.emit("send_message", messageData);
-    setMessages((prev) => [...prev, messageData]);
+    });
+
     setCurrentMessage("");
   };
 
   return (
     <div className="chat-container">
       <h2>Welcome, {user.username}</h2>
+
       <div className="chat-list">
         <h3>Chats</h3>
         {users.map((u) => (
@@ -85,16 +89,18 @@ export const Chat = ({ user }) => {
           </div>
         ))}
       </div>
+
       {currentChat && (
         <div className="chat-window">
-          <h5>You are chatting with {currentChat}</h5>
+          <h5>Chatting with {currentChat}</h5>
+
           <MessageList messages={messages} user={user} />
+
           <div className="message-field">
             <input
               type="text"
-              placeholder="Type a message..."
               value={currentMessage}
-              style={{ minWidth: "400px" }}
+              placeholder="Type a message..."
               onChange={(e) => setCurrentMessage(e.target.value)}
             />
             <button className="btn-prime" onClick={sendMessage}>
