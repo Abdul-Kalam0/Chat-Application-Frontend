@@ -3,7 +3,6 @@ import React, { useEffect, useRef } from "react";
 const MessageList = ({ messages, user }) => {
   const bottomRef = useRef(null);
 
-  // Auto scroll to last message
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -15,12 +14,11 @@ const MessageList = ({ messages, user }) => {
 
         return (
           <div
-            key={msg._id || `${msg.sender}-${msg.createdAt}`}
+            key={msg._id || msg.createdAt}
             className={`message-row ${isMe ? "me" : "other"}`}
           >
             <div className="message-bubble">
               {!isMe && <div className="sender">{msg.sender}</div>}
-
               <div className="text">{msg.message}</div>
 
               {msg.createdAt && (
