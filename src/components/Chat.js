@@ -22,7 +22,7 @@ export const Chat = ({ user }) => {
         const token = localStorage.getItem("token");
         const { data } = await axios.get(`${BASE_URL}/users`, {
           params: { currentUser: user.username },
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
         });
         setUsers(data);
       } catch (error) {
@@ -34,7 +34,7 @@ export const Chat = ({ user }) => {
 
     socket.on("receive_message", (msg) => {
       if (msg.sender === currentChat || msg.receiver === currentChat) {
-        setMessages(prev => [...prev, msg]);
+        setMessages((prev) => [...prev, msg]);
       }
     });
 
@@ -46,7 +46,7 @@ export const Chat = ({ user }) => {
       const token = localStorage.getItem("token");
       const { data } = await axios.get(`${BASE_URL}/messages`, {
         params: { sender: user.username, receiver },
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
       setMessages(data);
       setCurrentChat(receiver);
@@ -61,7 +61,7 @@ export const Chat = ({ user }) => {
     socket.emit("send_message", {
       sender: user.username,
       receiver: currentChat,
-      message: currentMessage
+      message: currentMessage,
     });
 
     setCurrentMessage("");
@@ -74,13 +74,39 @@ export const Chat = ({ user }) => {
       <div className="row">
         <div className="col-md-4">
           <div className="list-group">
-            {users.map(u => (
+            {users.map((u) => (
               <button
                 key={u._id}
-                className={`list-group-item ${currentChat === u.username ? "active" : ""}`}
+                className={`list-group-item ${
+                  currentChat === u.username ? "active" : ""
+                }`}
                 onClick={() => fetchMessages(u.username)}
               >
                 {u.username}
               </button>
             ))}
           </div>
+        </div>
+
+        <div className="col-md-8">
+          {currentChat && (
+            <>
+              <MessageList messages={messages} user={user} />
+              <div className="input-group mt-3">
+                <input
+                  className="form-control"
+                  value={currentMessage}
+                  onChange={(e) => setCurrentMessage(e.target.value)}
+                  placeholder="Type..."
+                />
+                <button className="btn btn-primary" onClick={sendMessage}>
+                  Send
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
