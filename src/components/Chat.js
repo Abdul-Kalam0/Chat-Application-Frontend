@@ -3,7 +3,9 @@ import { io } from "socket.io-client";
 import axios from "axios";
 import MessageList from "./MessageList";
 
-const socket = io("https://chat-application-backend-001.vercel.app");
+const socket = io("https://chat-application-backend-001.vercel.app", {
+  transports: ["websocket"], // Force WebSocket transport
+});
 
 export const Chat = ({ user }) => {
   const [users, setUsers] = useState([]);
@@ -12,8 +14,17 @@ export const Chat = ({ user }) => {
   const [currentMessage, setCurrentMessage] = useState("");
 
   useEffect(() => {
-    // Join the user's room for targeted message delivery
-    socket.emit("join", user.username);
+    // Log socket connection
+    socket.on("connect", () => {
+      console.log("Socket connected:", socket.id);
+      // Join the user's room for targeted message delivery
+      socket.emit("join", user.username);
+      console.log(`Joined room for ${user.username}`);
+    });
+
+    socket.on("disconnect", () => {
+      console.log("Socket disconnected");
+    });
 
     // Fetch all users excluding the current user
     const fetchUsers = async () => {
@@ -32,8 +43,9 @@ export const Chat = ({ user }) => {
 
     fetchUsers();
 
-    // Listen for incoming messages
+    // Listen for incoming messages with logging
     socket.on("receive_message", (data) => {
+      console.log("Received message:", data); // Debug log
       // Only update if it's for the current chat and not a duplicate (check by content)
       if (
         (data.sender === currentChat || data.receiver === currentChat) &&
@@ -50,8 +62,10 @@ export const Chat = ({ user }) => {
 
     return () => {
       socket.off("receive_message");
+      socket.off("connect");
+      socket.off("disconnect");
     };
-  }, [currentChat, user.username]); // Removed 'messages' from deps to prevent re-runs
+  }, [currentChat, user.username]); // Removed 'messages' from deps
 
   const fetchMessages = async (receiver) => {
     try {
@@ -76,7 +90,8 @@ export const Chat = ({ user }) => {
       message: currentMessage,
     };
     socket.emit("send_message", messageData);
-    // Add locally for immediate UI update (duplicate prevention handled in listener)
+    console.log("Sent message:", messageData); // Debug log
+    // Add locally for immediate UI update
     setMessages((prev) => [...prev, messageData]);
     setCurrentMessage("");
   };
