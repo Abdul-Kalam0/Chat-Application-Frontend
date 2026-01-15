@@ -12,7 +12,7 @@ export const Chat = ({ user }) => {
   const [currentMessage, setCurrentMessage] = useState("");
 
   useEffect(() => {
-    // Join the user's room for targeted message delivery (fixes message delivery issue)
+    // Join the user's room for targeted message delivery
     socket.emit("join", user.username);
 
     // Fetch all users excluding the current user
@@ -34,10 +34,15 @@ export const Chat = ({ user }) => {
 
     // Listen for incoming messages
     socket.on("receive_message", (data) => {
-      // Only update if it's for the current chat and not a duplicate
+      // Only update if it's for the current chat and not a duplicate (check by content)
       if (
         (data.sender === currentChat || data.receiver === currentChat) &&
-        !messages.some((msg) => msg._id === data._id) // Prevent duplicates
+        !messages.some(
+          (msg) =>
+            msg.sender === data.sender &&
+            msg.receiver === data.receiver &&
+            msg.message === data.message
+        )
       ) {
         setMessages((prev) => [...prev, data]);
       }
@@ -46,7 +51,7 @@ export const Chat = ({ user }) => {
     return () => {
       socket.off("receive_message");
     };
-  }, [currentChat, user.username, messages]); // Added messages to deps for duplicate check
+  }, [currentChat, user.username]); // Removed 'messages' from deps to prevent re-runs
 
   const fetchMessages = async (receiver) => {
     try {
@@ -71,7 +76,8 @@ export const Chat = ({ user }) => {
       message: currentMessage,
     };
     socket.emit("send_message", messageData);
-    // Don't add locally—let the socket listener handle it to avoid duplicates
+    // Add locally for immediate UI update (duplicate prevention handled in listener)
+    setMessages((prev) => [...prev, messageData]);
     setCurrentMessage("");
   };
 
