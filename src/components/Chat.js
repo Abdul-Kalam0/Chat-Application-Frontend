@@ -4,11 +4,7 @@ import axios from "axios";
 import MessageList from "./MessageList";
 import "./chat.css";
 
-const BASE_URL = "https://chat-application-backend-001.vercel.app";
-
-const socket = io(BASE_URL, {
-  transports: ["websocket"],
-});
+const socket = io("https://chat-application-backend-001.vercel.app");
 
 export const Chat = ({ user }) => {
   const [users, setUsers] = useState([]);
