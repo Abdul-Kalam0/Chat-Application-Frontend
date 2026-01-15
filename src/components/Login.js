@@ -14,6 +14,7 @@ const Login = ({ setUser }) => {
           password,
         }
       );
+      localStorage.setItem("token", data.token); // Store token
       setUser(data);
     } catch (error) {
       console.error(error.response?.data?.message || "Error logging in");

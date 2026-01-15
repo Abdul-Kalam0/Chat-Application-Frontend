@@ -15,7 +15,7 @@ const Register = ({ setUser }) => {
           password,
         }
       );
-
+      localStorage.setItem("token", data.token); // Store token
       setRegistrationSuccess(
         "You are registered successfully. Proceed to login."
       );
