@@ -4,7 +4,7 @@ import axios from "axios";
 import MessageList from "./MessageList";
 
 const socket = io("https://chat-application-backend-001.vercel.app", {
-  transports: ["websocket"], // Force WebSocket transport
+  transports: ["websocket"],  // Force WebSocket transport
 });
 
 export const Chat = ({ user }) => {
@@ -45,7 +45,7 @@ export const Chat = ({ user }) => {
 
     // Listen for incoming messages with logging
     socket.on("receive_message", (data) => {
-      console.log("Received message:", data); // Debug log
+      console.log("Received message:", data);  // Debug log
       // Only update if it's for the current chat and not a duplicate (check by content)
       if (
         (data.sender === currentChat || data.receiver === currentChat) &&
@@ -65,7 +65,7 @@ export const Chat = ({ user }) => {
       socket.off("connect");
       socket.off("disconnect");
     };
-  }, [currentChat, user.username]); // Removed 'messages' from deps
+  }, [currentChat, user.username]);  // Removed 'messages' from deps
 
   const fetchMessages = async (receiver) => {
     try {
@@ -83,14 +83,14 @@ export const Chat = ({ user }) => {
   };
 
   const sendMessage = () => {
-    if (!currentMessage.trim()) return; // Prevent empty messages
+    if (!currentMessage.trim()) return;  // Prevent empty messages
     const messageData = {
       sender: user.username,
       receiver: currentChat,
       message: currentMessage,
     };
     socket.emit("send_message", messageData);
-    console.log("Sent message:", messageData); // Debug log
+    console.log("Sent message:", messageData);  // Debug log
     // Add locally for immediate UI update
     setMessages((prev) => [...prev, messageData]);
     setCurrentMessage("");
@@ -132,10 +132,7 @@ export const Chat = ({ user }) => {
               </div>
               <div className="card-body d-flex flex-column flex-grow-1 p-0">
                 {/* Message list with scrolling */}
-                <div
-                  className="flex-grow-1 overflow-auto p-3"
-                  style={{ maxHeight: "60vh" }}
-                >
+                <div className="flex-grow-1 overflow-auto p-3" style={{ maxHeight: "60vh" }}>
                   <MessageList messages={messages} user={user} />
                 </div>
                 {/* Fixed input at bottom */}
@@ -147,7 +144,7 @@ export const Chat = ({ user }) => {
                       placeholder="Type a message..."
                       value={currentMessage}
                       onChange={(e) => setCurrentMessage(e.target.value)}
-                      onKeyPress={(e) => e.key === "Enter" && sendMessage()} // Enter to send
+                      onKeyPress={(e) => e.key === "Enter" && sendMessage()}  // Enter to send
                     />
                     <button className="btn btn-primary" onClick={sendMessage}>
                       Send
