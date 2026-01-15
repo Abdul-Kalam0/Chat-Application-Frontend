@@ -1,19 +1,41 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 
 const MessageList = ({ messages, user }) => {
+  const bottomRef = useRef(null);
+
+  // Auto scroll to last message
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
   return (
     <div className="message-list">
-      {messages.map((msg, index) => (
-        <div
-          key={index}
-          className={`message ${
-            msg.sender === user.username ? "sent" : "received"
-          }`}
-        >
-          <strong>{msg.sender}: </strong>
-          {msg.message}
-        </div>
-      ))}
+      {messages.map((msg) => {
+        const isMe = msg.sender === user.username;
+
+        return (
+          <div
+            key={msg._id || `${msg.sender}-${msg.createdAt}`}
+            className={`message-row ${isMe ? "me" : "other"}`}
+          >
+            <div className="message-bubble">
+              {!isMe && <div className="sender">{msg.sender}</div>}
+
+              <div className="text">{msg.message}</div>
+
+              {msg.createdAt && (
+                <div className="time">
+                  {new Date(msg.createdAt).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })}
+      <div ref={bottomRef} />
     </div>
   );
 };
