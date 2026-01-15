@@ -3,7 +3,8 @@ import { io } from "socket.io-client";
 import axios from "axios";
 import MessageList from "./MessageList";
 
-const socket = io("https://chat-application-backend-001.vercel.app");
+const BASE_URL = "https://chat-application-backend-001.vercel.app";
+const socket = io(BASE_URL, { transports: ["websocket"] });
 
 export const Chat = ({ user }) => {
   const [users, setUsers] = useState([]);
@@ -12,125 +13,74 @@ export const Chat = ({ user }) => {
   const [currentMessage, setCurrentMessage] = useState("");
 
   useEffect(() => {
+    socket.emit("join", user.username);
+  }, [user.username]);
+
+  useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const token = localStorage.getItem("token"); // Get token from storage
-        const { data } = await axios.get(
-          "https://chat-application-backend-001.vercel.app/users",
-          {
-            params: { currentUser: user.username },
-            headers: { Authorization: `Bearer ${token}` }, // Include token
-          }
-        );
+        const token = localStorage.getItem("token");
+        const { data } = await axios.get(`${BASE_URL}/users`, {
+          params: { currentUser: user.username },
+          headers: { Authorization: `Bearer ${token}` }
+        });
         setUsers(data);
       } catch (error) {
-        console.error("Error fetching users", error);
+        console.error(error);
       }
     };
 
     fetchUsers();
 
-    socket.on("receive_message", (data) => {
-      if (data.sender === currentChat || data.receiver === currentChat) {
-        setMessages((prev) => [...prev, data]);
+    socket.on("receive_message", (msg) => {
+      if (msg.sender === currentChat || msg.receiver === currentChat) {
+        setMessages(prev => [...prev, msg]);
       }
     });
 
-    return () => {
-      socket.off("receive_message");
-    };
+    return () => socket.off("receive_message");
   }, [currentChat, user.username]);
 
   const fetchMessages = async (receiver) => {
     try {
       const token = localStorage.getItem("token");
-      const { data } = await axios.get(
-        "https://chat-application-backend-001.vercel.app/messages",
-        {
-          params: { sender: user.username, receiver },
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const { data } = await axios.get(`${BASE_URL}/messages`, {
+        params: { sender: user.username, receiver },
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setMessages(data);
       setCurrentChat(receiver);
     } catch (error) {
-      console.error("Error fetching messages", error);
+      console.error(error);
     }
   };
 
   const sendMessage = () => {
-    const messageData = {
+    if (!currentMessage.trim()) return;
+
+    socket.emit("send_message", {
       sender: user.username,
       receiver: currentChat,
-      message: currentMessage,
-    };
-    socket.emit("send_message", messageData);
-    setMessages((prev) => [...prev, messageData]);
+      message: currentMessage
+    });
+
     setCurrentMessage("");
   };
 
   return (
-    <div className="container-fluid mt-4">
-      <h2 className="text-center mb-4">Welcome, {user.username}</h2>
+    <div className="container mt-3">
+      <h3>Welcome, {user.username}</h3>
+
       <div className="row">
-        {/* Sidebar for users */}
-        <div className="col-md-4 col-lg-3">
-          <div className="card h-100">
-            <div className="card-header bg-primary text-white">
-              <h5 className="mb-0">Chats</h5>
-            </div>
-            <div className="card-body p-0">
-              <div className="list-group list-group-flush">
-                {users.map((u) => (
-                  <button
-                    key={u._id}
-                    className={`list-group-item list-group-item-action ${
-                      currentChat === u.username ? "active" : ""
-                    }`}
-                    onClick={() => fetchMessages(u.username)}
-                  >
-                    {u.username}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-        {/* Chat window */}
-        <div className="col-md-8 col-lg-9">
-          {currentChat ? (
-            <div className="card h-100">
-              <div className="card-header bg-light">
-                <h5 className="mb-0">Chatting with {currentChat}</h5>
-              </div>
-              <div
-                className="card-body d-flex flex-column"
-                style={{ height: "70vh" }}
+        <div className="col-md-4">
+          <div className="list-group">
+            {users.map(u => (
+              <button
+                key={u._id}
+                className={`list-group-item ${currentChat === u.username ? "active" : ""}`}
+                onClick={() => fetchMessages(u.username)}
               >
-                <div className="flex-grow-1 overflow-auto mb-3">
-                  <MessageList messages={messages} user={user} />
-                </div>
-                <div className="input-group">
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Type a message..."
-                    value={currentMessage}
-                    onChange={(e) => setCurrentMessage(e.target.value)}
-                  />
-                  <button className="btn btn-primary" onClick={sendMessage}>
-                    Send
-                  </button>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="d-flex justify-content-center align-items-center h-100">
-              <p className="text-muted">Select a user to start chatting.</p>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
+                {u.username}
+              </button>
+            ))}
+          </div>
