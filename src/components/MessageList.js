@@ -2,13 +2,19 @@ import React from "react";
 
 const MessageList = ({ messages, user }) => {
   return (
-    <div className="message-list">
+    <div>
       {messages.map((msg, index) => (
         <div
-          key={index}
-          className={`message ${
-            msg.sender === user.username ? "sent" : "received"
+          key={msg._id || index} // Use _id if available for better uniqueness
+          className={`alert mb-2 ${
+            msg.sender === user.username
+              ? "alert-success text-end" // Sent messages: green, right-aligned
+              : "alert-secondary" // Received: gray, left-aligned
           }`}
+          style={{
+            maxWidth: "75%",
+            marginLeft: msg.sender === user.username ? "auto" : "0",
+          }}
         >
           <strong>{msg.sender}: </strong>
           {msg.message}
