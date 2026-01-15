@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState, useEffect, use } from "react";
 import { io } from "socket.io-client";
 import axios from "axios";
 import MessageList from "./MessageList";
@@ -12,54 +12,46 @@ export const Chat = ({ user }) => {
   const [messages, setMessages] = useState([]);
   const [currentMessage, setCurrentMessage] = useState("");
 
-  const currentChatRef = useRef(null);
-
   useEffect(() => {
-    currentChatRef.current = currentChat;
-  }, [currentChat]);
-
-  // Fetch users only once
-  useEffect(() => {
+    // Fetch all users excluding the current user
     const fetchUsers = async () => {
       try {
-        const { data } = await axios.get(`${BASE_URL}/users`, {
-          params: { currentUser: user.username },
-        });
-        setUsers(data.users || []);
+        const { data } = await axios.get(
+          "https://chat-application-backend-001.vercel.app/users",
+          {
+            params: { currentUser: user.username },
+          }
+        );
+        setUsers(data);
       } catch (error) {
         console.error("Error fetching users", error);
       }
     };
+    console.log(users);
 
     fetchUsers();
-  }, [user.username]);
 
-  // Socket listener (register once)
-  useEffect(() => {
-    const handleReceive = (data) => {
-      if (
-        data.sender === currentChatRef.current ||
-        data.receiver === currentChatRef.current
-      ) {
+    // Listen for incoming messages
+    socket.on("receive_message", (data) => {
+      if (data.sender === currentChat || data.receiver === currentChat) {
         setMessages((prev) => [...prev, data]);
       }
-    };
-
-    socket.on("receive_message", handleReceive);
+    });
 
     return () => {
-      socket.off("receive_message", handleReceive);
+      socket.off("receive_message");
     };
-  }, []);
+  }, [currentChat]);
 
-  // Fetch messages when clicking a user
   const fetchMessages = async (receiver) => {
     try {
-      const { data } = await axios.get(`${BASE_URL}/messages`, {
-        params: { sender: user.username, receiver },
-      });
-
-      setMessages(data.messages || []);
+      const { data } = await axios.get(
+        "https://chat-application-backend-001.vercel.app/messages",
+        {
+          params: { sender: user.username, receiver },
+        }
+      );
+      setMessages(data);
       setCurrentChat(receiver);
     } catch (error) {
       console.error("Error fetching messages", error);
@@ -67,14 +59,11 @@ export const Chat = ({ user }) => {
   };
 
   const sendMessage = () => {
-    if (!currentMessage.trim() || !currentChat) return;
-
     const messageData = {
       sender: user.username,
       receiver: currentChat,
-      message: currentMessage.trim(),
+      message: currentMessage,
     };
-
     socket.emit("send_message", messageData);
     setMessages((prev) => [...prev, messageData]);
     setCurrentMessage("");
@@ -83,7 +72,6 @@ export const Chat = ({ user }) => {
   return (
     <div className="chat-container">
       <h2>Welcome, {user.username}</h2>
-
       <div className="chat-list">
         <h3>Chats</h3>
         {users.map((u) => (
@@ -98,24 +86,26 @@ export const Chat = ({ user }) => {
           </div>
         ))}
       </div>
-
       {currentChat && (
         <div className="chat-window">
-          <h5>Chatting with {currentChat}</h5>
-
+          <h5>You are chatting with {currentChat}</h5>
           <MessageList messages={messages} user={user} />
-
           <div className="message-field">
             <input
-              value={currentMessage}
-              onChange={(e) => setCurrentMessage(e.target.value)}
+              type="text"
               placeholder="Type a message..."
-              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+              value={currentMessage}
+              style={{ minWidth: "400px" }}
+              onChange={(e) => setCurrentMessage(e.target.value)}
             />
-            <button onClick={sendMessage}>Send</button>
+            <button className="btn-prime" onClick={sendMessage}>
+              Send
+            </button>
           </div>
         </div>
       )}
     </div>
   );
 };
+
+optimize it 
