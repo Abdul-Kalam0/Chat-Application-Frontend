@@ -7,14 +7,10 @@ const Login = ({ setUser }) => {
 
   const handleLogin = async () => {
     try {
-      const { data } = await axios.post(
-        "https://chat-application-backend-001.vercel.app/auth/login",
-        {
-          username,
-          password,
-        }
-      );
-      localStorage.setItem("token", data.token); // Store token
+      const { data } = await axios.post("http://localhost:5001/auth/login", {
+        username,
+        password,
+      });
       setUser(data);
     } catch (error) {
       console.error(error.response?.data?.message || "Error logging in");

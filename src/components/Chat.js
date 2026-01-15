@@ -2,9 +2,9 @@ import React, { useState, useEffect } from "react";
 import { io } from "socket.io-client";
 import axios from "axios";
 import MessageList from "./MessageList";
+import "./chat.css";
 
-const BASE_URL = "https://chat-application-backend-001.vercel.app";
-const socket = io(BASE_URL, { transports: ["websocket"] });
+const socket = io("http://localhost:5001");
 
 export const Chat = ({ user }) => {
   const [users, setUsers] = useState([]);
@@ -13,100 +13,90 @@ export const Chat = ({ user }) => {
   const [currentMessage, setCurrentMessage] = useState("");
 
   useEffect(() => {
-    socket.emit("join", user.username);
-  }, [user.username]);
-
-  useEffect(() => {
+    // Fetch all users excluding the current user
     const fetchUsers = async () => {
       try {
-        const token = localStorage.getItem("token");
-        const { data } = await axios.get(`${BASE_URL}/users`, {
+        const { data } = await axios.get("http://localhost:5001/users", {
           params: { currentUser: user.username },
-          headers: { Authorization: `Bearer ${token}` },
         });
         setUsers(data);
       } catch (error) {
-        console.error(error);
+        console.error("Error fetching users", error);
       }
     };
 
     fetchUsers();
 
-    socket.on("receive_message", (msg) => {
-      if (msg.sender === currentChat || msg.receiver === currentChat) {
-        setMessages((prev) => [...prev, msg]);
+    // Listen for incoming messages
+    socket.on("receive_message", (data) => {
+      if (data.sender === currentChat || data.receiver === currentChat) {
+        setMessages((prev) => [...prev, data]);
       }
     });
 
-    return () => socket.off("receive_message");
-  }, [currentChat, user.username]);
+    return () => {
+      socket.off("receive_message");
+    };
+  }, [currentChat]);
 
   const fetchMessages = async (receiver) => {
     try {
-      const token = localStorage.getItem("token");
-      const { data } = await axios.get(`${BASE_URL}/messages`, {
+      const { data } = await axios.get("http://localhost:5001/messages", {
         params: { sender: user.username, receiver },
-        headers: { Authorization: `Bearer ${token}` },
       });
       setMessages(data);
       setCurrentChat(receiver);
     } catch (error) {
-      console.error(error);
+      console.error("Error fetching messages", error);
     }
   };
 
   const sendMessage = () => {
-    if (!currentMessage.trim()) return;
-
-    socket.emit("send_message", {
+    const messageData = {
       sender: user.username,
       receiver: currentChat,
       message: currentMessage,
-    });
-
+    };
+    socket.emit("send_message", messageData);
+    setMessages((prev) => [...prev, messageData]);
     setCurrentMessage("");
   };
 
   return (
-    <div className="container mt-3">
-      <h3>Welcome, {user.username}</h3>
-
-      <div className="row">
-        <div className="col-md-4">
-          <div className="list-group">
-            {users.map((u) => (
-              <button
-                key={u._id}
-                className={`list-group-item ${
-                  currentChat === u.username ? "active" : ""
-                }`}
-                onClick={() => fetchMessages(u.username)}
-              >
-                {u.username}
-              </button>
-            ))}
+    <div className="chat-container">
+      <h2>Welcome, {user.username}</h2>
+      <div className="chat-list">
+        <h3>Chats</h3>
+        {users.map((u) => (
+          <div
+            key={u._id}
+            className={`chat-user ${
+              currentChat === u.username ? "active" : ""
+            }`}
+            onClick={() => fetchMessages(u.username)}
+          >
+            {u.username}
+          </div>
+        ))}
+      </div>
+      {currentChat && (
+        <div className="chat-window">
+          <h5>You are chatting with {currentChat}</h5>
+          <MessageList messages={messages} user={user} />
+          <div className="message-field">
+            <input
+              type="text"
+              placeholder="Type a message..."
+              value={currentMessage}
+              style={{ minWidth: "400px" }}
+              onChange={(e) => setCurrentMessage(e.target.value)}
+            />
+            <button className="btn-prime" onClick={sendMessage}>
+              Send
+            </button>
           </div>
         </div>
-
-        <div className="col-md-8">
-          {currentChat && (
-            <>
-              <MessageList messages={messages} user={user} />
-              <div className="input-group mt-3">
-                <input
-                  className="form-control"
-                  value={currentMessage}
-                  onChange={(e) => setCurrentMessage(e.target.value)}
-                  placeholder="Type..."
-                />
-                <button className="btn btn-primary" onClick={sendMessage}>
-                  Send
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
+      )}
     </div>
   );
 };
