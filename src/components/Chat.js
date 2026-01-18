@@ -3,9 +3,13 @@ import { io } from "socket.io-client";
 import axios from "axios";
 import MessageList from "./MessageList";
 
-const BASE_URL = "https://chat-application-backend-001.vercel.app";
+// const BASE_URL = "https://chat-application-backend-001.vercel.app";
+const BASE_URL = "http://localhost:5001";
 
-const socket = io(BASE_URL);
+// Create socket once
+const socket = io(BASE_URL, {
+  transports: ["websocket"],
+});
 
 export const Chat = ({ user }) => {
   const [users, setUsers] = useState([]);
@@ -13,14 +17,29 @@ export const Chat = ({ user }) => {
   const [messages, setMessages] = useState([]);
   const [currentMessage, setCurrentMessage] = useState("");
 
-  // Join socket room
+  // Join room only AFTER socket connects
   useEffect(() => {
-    if (user?.username) {
+    const joinRoom = () => {
       socket.emit("join", user.username);
-    }
+      console.log("Joined room:", user.username);
+    };
+
+    socket.on("connect", () => {
+      console.log("Socket connected:", socket.id);
+      joinRoom();
+    });
+
+    socket.on("disconnect", () => {
+      console.log("Socket disconnected");
+    });
+
+    return () => {
+      socket.off("connect");
+      socket.off("disconnect");
+    };
   }, [user.username]);
 
-  // Fetch users once
+  // Fetch users
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -36,14 +55,24 @@ export const Chat = ({ user }) => {
     fetchUsers();
   }, [user.username]);
 
-  // Listen to socket messages
+  // Receive messages from server with duplicate prevention
   useEffect(() => {
-    const handler = (msg) => {
-      setMessages((prev) => [...prev, msg]);
+    const onReceive = (msg) => {
+      console.log("Received message:", msg); // Debug log
+      setMessages((prev) => {
+        // Prevent duplicates by checking sender, receiver, and message content
+        const isDuplicate = prev.some(
+          (existing) =>
+            existing.sender === msg.sender &&
+            existing.receiver === msg.receiver &&
+            existing.message === msg.message
+        );
+        return isDuplicate ? prev : [...prev, msg];
+      });
     };
 
-    socket.on("receive_message", handler);
-    return () => socket.off("receive_message", handler);
+    socket.on("receive_message", onReceive);
+    return () => socket.off("receive_message", onReceive);
   }, []);
 
   // Load chat history
@@ -59,16 +88,21 @@ export const Chat = ({ user }) => {
     }
   };
 
-  // Send message
+  // Send message with local addition for instant UI update
   const sendMessage = () => {
     if (!currentMessage.trim() || !currentChat) return;
 
-    socket.emit("send_message", {
+    const messageData = {
       sender: user.username,
       receiver: currentChat,
       message: currentMessage.trim(),
-    });
+    };
 
+    socket.emit("send_message", messageData);
+    console.log("Sent message:", messageData); // Debug log
+
+    // Add locally for immediate sender feedback (duplicate prevention in listener)
+    setMessages((prev) => [...prev, messageData]);
     setCurrentMessage("");
   };
 
@@ -77,7 +111,7 @@ export const Chat = ({ user }) => {
       <h3 className="text-center mb-4">Welcome, {user.username}</h3>
 
       <div className="row">
-        {/* Users */}
+        {/* User List */}
         <div className="col-md-4 col-lg-3 border-end">
           <div className="list-group">
             {users.map((u) => (
@@ -94,7 +128,7 @@ export const Chat = ({ user }) => {
           </div>
         </div>
 
-        {/* Chat */}
+        {/* Chat Area */}
         <div className="col-md-8 col-lg-9">
           {currentChat ? (
             <div className="d-flex flex-column h-100">

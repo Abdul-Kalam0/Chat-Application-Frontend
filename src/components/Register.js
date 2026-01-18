@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import axios from "axios";
 
+// const BASE_URL = "https://chat-application-backend-001.vercel.app";
+const BASE_URL = "http://localhost:5001";
+
 const Register = ({ setUser }) => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -8,13 +11,10 @@ const Register = ({ setUser }) => {
 
   const handleRegister = async () => {
     try {
-      const { data } = await axios.post(
-        "https://chat-application-backend-001.vercel.app/auth/register",
-        {
-          username,
-          password,
-        }
-      );
+      const { data } = await axios.post(`${BASE_URL}/auth/register`, {
+        username,
+        password,
+      });
 
       setRegistrationSuccess(
         "You are registered successfully. Proceed to login."
