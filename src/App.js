@@ -10,20 +10,21 @@ const App = () => {
 
   return (
     <div className="app">
-      <h1>Chat App</h1>
+      <h1 className="text-center my-4">Chat App</h1>
+
       {!user ? (
         <div className="container mt-5 text-center">
-          <div className="row">
-            <div className="col-md-6">
+          <div className="row justify-content-center">
+            <div className="col-md-6 mb-4">
               <Register setUser={setUser} />
             </div>
-            <div className="col-md-6">
+            <div className="col-md-6 mb-4">
               <Login setUser={setUser} />
             </div>
           </div>
         </div>
       ) : (
-        <Chat user={user} />
+        <Chat user={user} setUser={setUser} />
       )}
     </div>
   );
