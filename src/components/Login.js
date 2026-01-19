@@ -1,19 +1,20 @@
 import React, { useState } from "react";
 import axios from "axios";
 
+const BASE_URL = "https://chat-application-backend-7lg7.onrender.com";
+
+// const BASE_URL = "http://localhost:5001";
+
 const Login = ({ setUser }) => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
   const handleLogin = async () => {
     try {
-      const { data } = await axios.post(
-        "https://chat-application-backend-7lg7.onrender.com/auth/login",
-        {
-          username,
-          password,
-        }
-      );
+      const { data } = await axios.post(`${BASE_URL}/auth/login`, {
+        username,
+        password,
+      });
       setUser(data);
     } catch (error) {
       console.error(error.response?.data?.message || "Error logging in");

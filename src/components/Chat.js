@@ -4,7 +4,11 @@ import axios from "axios";
 import MessageList from "./MessageList";
 import "./chat.css";
 
-const socket = io("https://chat-application-backend-7lg7.onrender.com");
+const BASE_URL = "https://chat-application-backend-7lg7.onrender.com";
+
+// const BASE_URL = "http://localhost:5001";
+
+const socket = io(`${BASE_URL}`);
 
 export const Chat = ({ user }) => {
   const [users, setUsers] = useState([]);
@@ -16,12 +20,9 @@ export const Chat = ({ user }) => {
     // Fetch all users excluding the current user
     const fetchUsers = async () => {
       try {
-        const { data } = await axios.get(
-          "https://chat-application-backend-7lg7.onrender.com/users",
-          {
-            params: { currentUser: user.username },
-          }
-        );
+        const { data } = await axios.get(`${BASE_URL}/users`, {
+          params: { currentUser: user.username },
+        });
         setUsers(data);
       } catch (error) {
         console.error("Error fetching users", error);
@@ -44,12 +45,9 @@ export const Chat = ({ user }) => {
 
   const fetchMessages = async (receiver) => {
     try {
-      const { data } = await axios.get(
-        "https://chat-application-backend-7lg7.onrender.com/messages",
-        {
-          params: { sender: user.username, receiver },
-        }
-      );
+      const { data } = await axios.get(`${BASE_URL}/messages`, {
+        params: { sender: user.username, receiver },
+      });
       setMessages(data);
       setCurrentChat(receiver);
     } catch (error) {
