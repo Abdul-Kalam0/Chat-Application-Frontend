@@ -40,7 +40,7 @@ export const Chat = ({ user }) => {
     return () => {
       socket.off("receive_message");
     };
-  }, [currentChat]);
+  }, [currentChat, user.username]);
 
   const fetchMessages = async (receiver) => {
     try {
