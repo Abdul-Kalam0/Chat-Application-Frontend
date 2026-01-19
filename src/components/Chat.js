@@ -3,8 +3,8 @@ import { io } from "socket.io-client";
 import axios from "axios";
 import MessageList from "./MessageList";
 
-// const BASE_URL = "https://chat-application-backend-001.vercel.app";
-const BASE_URL = "http://localhost:5001";
+const BASE_URL = "https://chat-application-backend-7lg7.onrender.com";
+// const BASE_URL = "http://localhost:5001";
 
 // Create socket once
 const socket = io(BASE_URL, {

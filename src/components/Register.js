@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import axios from "axios";
 
-// const BASE_URL = "https://chat-application-backend-001.vercel.app";
-const BASE_URL = "http://localhost:5001";
+const BASE_URL = "https://chat-application-backend-7lg7.onrender.com";
+//const BASE_URL = "http://localhost:5001";
 
 const Register = ({ setUser }) => {
   const [username, setUsername] = useState("");
