@@ -4,10 +4,14 @@ import axios from "axios";
 import MessageList from "./MessageList";
 
 const BASE_URL = "https://chat-application-backend-7lg7.onrender.com";
-//const BASE_URL = "http://localhost:5001";
+// const BASE_URL = "http://localhost:5001";
 
-// create socket once
-const socket = io(BASE_URL);
+// 🔒 FORCE WEBSOCKET + RECONNECT
+const socket = io(BASE_URL, {
+  transports: ["websocket"],
+  reconnection: true,
+  reconnectionAttempts: 10,
+});
 
 export const Chat = ({ user, setUser }) => {
   const [users, setUsers] = useState([]);
@@ -15,60 +19,74 @@ export const Chat = ({ user, setUser }) => {
   const [messages, setMessages] = useState([]);
   const [currentMessage, setCurrentMessage] = useState("");
 
-  // 🔑 Join user room ONCE
+  // ✅ JOIN ROOM (and rejoin on reconnect)
   useEffect(() => {
+    if (!user?.username) return;
+
     socket.emit("join", user.username);
+
+    socket.on("connect", () => {
+      socket.emit("join", user.username);
+    });
+
+    return () => {
+      socket.off("connect");
+    };
   }, [user.username]);
 
-  // 📥 Fetch users
+  // fetch users
   useEffect(() => {
     axios
       .get(`${BASE_URL}/users`, {
         params: { currentUser: user.username },
       })
-      .then((res) => setUsers(res.data))
-      .catch((err) => console.error(err));
+      .then((res) => setUsers(res.data));
   }, [user.username]);
 
-  // 📡 Receive private messages
+  // receive messages (NO duplicates)
   useEffect(() => {
-    const handleReceive = (msg) => {
-      if (msg.sender === currentChat || msg.receiver === currentChat) {
-        setMessages((prev) => [...prev, msg]);
-      }
+    const handler = (msg) => {
+      setMessages((prev) => {
+        const exists = prev.some((m) => m._id === msg._id);
+        return exists ? prev : [...prev, msg];
+      });
     };
 
-    socket.on("receive_message", handleReceive);
-    return () => socket.off("receive_message", handleReceive);
-  }, [currentChat]);
+    socket.on("receive_message", handler);
+    return () => socket.off("receive_message", handler);
+  }, []);
 
-  // 📜 Fetch chat history
+  // fetch history
   const fetchMessages = async (receiver) => {
-    try {
-      const { data } = await axios.get(`${BASE_URL}/messages`, {
-        params: { sender: user.username, receiver },
-      });
-      setMessages(data);
-      setCurrentChat(receiver);
-    } catch (err) {
-      console.error(err);
-    }
+    const { data } = await axios.get(`${BASE_URL}/messages`, {
+      params: { sender: user.username, receiver },
+    });
+    setMessages(data);
+    setCurrentChat(receiver);
   };
 
-  // ✉️ Send message (NO local push)
+  // send message (NO local duplicate)
   const sendMessage = () => {
     if (!currentMessage.trim() || !currentChat) return;
 
-    socket.emit("send_message", {
-      sender: user.username,
-      receiver: currentChat,
-      message: currentMessage,
-    });
+    socket.emit(
+      "send_message",
+      {
+        sender: user.username,
+        receiver: currentChat,
+        message: currentMessage,
+      },
+      (ack) => {
+        if (!ack?.success) {
+          console.error("Delivery failed");
+        }
+      }
+    );
 
     setCurrentMessage("");
   };
 
-  // 🚪 Logout
+  // logout
   const logout = () => {
     socket.disconnect();
     setUser(null);
@@ -76,24 +94,20 @@ export const Chat = ({ user, setUser }) => {
 
   return (
     <div className="container-fluid mt-4">
-      {/* Header */}
       <div className="d-flex justify-content-between mb-3">
-        <h4>
-          Welcome, <span className="text-primary">{user.username}</span>
-        </h4>
+        <h4>Welcome, {user.username}</h4>
         <button className="btn btn-danger" onClick={logout}>
           Logout
         </button>
       </div>
 
       <div className="row">
-        {/* Users */}
         <div className="col-md-3">
           <div className="list-group">
             {users.map((u) => (
               <button
                 key={u._id}
-                className={`list-group-item list-group-item-action ${
+                className={`list-group-item ${
                   currentChat === u.username ? "active" : ""
                 }`}
                 onClick={() => fetchMessages(u.username)}
@@ -104,7 +118,6 @@ export const Chat = ({ user, setUser }) => {
           </div>
         </div>
 
-        {/* Chat */}
         <div className="col-md-9">
           {currentChat ? (
             <>
@@ -113,7 +126,6 @@ export const Chat = ({ user, setUser }) => {
               <div className="input-group mt-3">
                 <input
                   className="form-control"
-                  placeholder="Type a message..."
                   value={currentMessage}
                   onChange={(e) => setCurrentMessage(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && sendMessage()}
@@ -124,7 +136,7 @@ export const Chat = ({ user, setUser }) => {
               </div>
             </>
           ) : (
-            <p className="text-muted">Select a user to start chat</p>
+            <p>Select a user to start chat</p>
           )}
         </div>
       </div>
